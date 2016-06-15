@@ -1,0 +1,14 @@
+name = Slick fields
+description = "Adds a field display formatter for the Slick carousel."
+core = 7.x
+package = Slick
+
+dependencies[] = image
+dependencies[] = slick
+
+; Information added by Drupal.org packaging script on 2016-03-28
+version = "7.x-2.0+7-dev"
+core = "7.x"
+project = "slick"
+datestamp = "1459174148"
+

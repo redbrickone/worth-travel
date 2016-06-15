@@ -1,0 +1,472 @@
+<?php
+/**
+ * Implements hook_install().
+ *
+ * Perform actions to set up the site for this profile.
+ */
+function zurb_profile_install() {
+  // Add text formats.
+  $filtered_html_format = array(
+      'format' => 'filtered_html',
+      'name' => 'Filtered HTML',
+      'weight' => 0,
+      'filters' => array(
+          // URL filter.
+          'filter_url' => array(
+              'weight' => 0,
+              'status' => 1,
+          ),
+          // HTML filter.
+          'filter_html' => array(
+              'weight' => 1,
+              'status' => 1,
+          ),
+          // Line break filter.
+          'filter_autop' => array(
+              'weight' => 2,
+              'status' => 1,
+          ),
+          // HTML corrector filter.
+          'filter_htmlcorrector' => array(
+              'weight' => 10,
+              'status' => 1,
+          ),
+      ),
+  );
+  $filtered_html_format = (object) $filtered_html_format;
+  filter_format_save($filtered_html_format);
+
+  $full_html_format = array(
+      'format' => 'full_html',
+      'name' => 'Full HTML',
+      'weight' => 1,
+      'filters' => array(
+          // URL filter.
+          'filter_url' => array(
+              'weight' => 0,
+              'status' => 1,
+          ),
+          // Line break filter.
+          'filter_autop' => array(
+              'weight' => 1,
+              'status' => 1,
+          ),
+          // HTML corrector filter.
+          'filter_htmlcorrector' => array(
+              'weight' => 10,
+              'status' => 1,
+          ),
+      ),
+  );
+  $full_html_format = (object) $full_html_format;
+  filter_format_save($full_html_format);
+
+  $raw_html_format = array(
+      'format' => 'raw_html',
+      'name' => 'Raw HTML',
+      'weight' => 2,
+      'filters' => array(
+          // URL filter
+          'filter_htmlcorrector' => array(
+              'weight' => 10,
+              'status' => 1,
+          ),
+      ),
+  );
+    $raw_html_format = (object) $raw_html_format;
+    filter_format_save($raw_html_format);
+  // Enable some zurb_profile blocks.
+  $default_theme = 'cksub';
+  $admin_theme = 'adminimal';
+  // disable all themes
+  db_update('system')
+    ->fields(array('status' => 0))
+    ->condition('type', 'theme')
+    ->execute();
+  // enable $default_theme
+  db_update('system')
+    ->fields(array('status' => 1))
+    ->condition('type', 'theme')
+    ->condition('name', $default_theme)
+    ->execute();
+  // enable $admin_theme
+  db_update('system')
+    ->fields(array('status' => 1))
+    ->condition('type', 'theme')
+    ->condition('name', $admin_theme)
+    ->execute();
+  variable_set('theme_default', $default_theme);
+  variable_set('admin_theme', $admin_theme);
+  // activate admin theme when editing a node
+  variable_set('node_admin_theme', '1');
+  $blocks = array(
+    array(
+      'module' => 'system',
+      'delta' => 'main',
+      'theme' => $default_theme,
+      'status' => 1,
+      'weight' => 0,
+      'region' => 'content',
+      'pages' => '',
+      'cache' => -1,
+    ),
+    array(
+      'module' => 'user',
+      'delta' => 'login',
+      'theme' => $default_theme,
+      'status' => 1,
+      'weight' => 0,
+      'region' => 'sidebar_first',
+      'pages' => '',
+      'cache' => -1,
+    ),
+    array(
+      'module' => 'system',
+      'delta' => 'help',
+      'theme' => $default_theme,
+      'status' => 1,
+      'weight' => -10,
+      'region' => 'content',
+      'pages' => '',
+      'cache' => -1,
+    ),
+    array(
+      'module' => 'system',
+      'delta' => 'main',
+      'theme' => $admin_theme,
+      'status' => 1,
+      'weight' => 0,
+      'region' => 'content',
+      'pages' => '',
+      'cache' => -1,
+    ),
+    array(
+      'module' => 'system',
+      'delta' => 'help',
+      'theme' => $admin_theme,
+      'status' => 1,
+      'weight' => 0,
+      'region' => 'help',
+      'pages' => '',
+      'cache' => -1,
+    ),
+  );
+  // drop system / user blocks to ensure correct building
+  db_delete('block')->condition('module', 'system')->execute();
+  db_delete('block')->condition('module', 'user')->execute();
+  // add in our blocks defined above
+  $query = db_insert('block')->fields(array('module', 'delta', 'theme', 'status', 'weight', 'region', 'pages', 'cache'));
+  foreach ($blocks as $block) {
+    $query->values($block);
+  }
+  $query->execute();
+
+  // Insert default pre-defined node types into the database. For a complete
+  // list of available node type attributes, refer to the node type API
+  // documentation at: http://api.drupal.org/api/HEAD/function/hook_node_info.
+  $types = array(
+      array(
+          'type' => 'page',
+          'name' => st('Basic page'),
+          'base' => 'node_content',
+          'description' => st("Use <em>basic pages</em> for your static content, such as an 'About us' page."),
+          'custom' => 1,
+          'modified' => 1,
+          'locked' => 0,
+      ),
+      array(
+          'type' => 'article',
+          'name' => st('Article'),
+          'base' => 'node_content',
+          'description' => st('Use <em>articles</em> for time-sensitive content like news, press releases or blog posts.'),
+          'custom' => 1,
+          'modified' => 1,
+          'locked' => 0,
+      ),
+  );
+
+  foreach ($types as $type) {
+      $type = node_type_set_defaults($type);
+      node_type_save($type);
+      node_add_body_field($type);
+  }
+
+  // Default "Basic page" to not be promoted and have comments disabled.
+  variable_set('node_options_page', array('status'));
+  variable_set('comment_page', COMMENT_NODE_HIDDEN);
+
+  // Don't display date and author information for "Basic page" nodes by default.
+  variable_set('node_submitted_page', FALSE);
+
+    // Create a default vocabulary named "Tags", enabled for the 'article' content type.
+    $description = st('Use tags to group articles on similar topics into categories.');
+    $vocabulary = (object) array(
+        'name' => st('Tags'),
+        'description' => $description,
+        'machine_name' => 'tags',
+    );
+    taxonomy_vocabulary_save($vocabulary);
+
+  $field = array(
+      'field_name' => 'field_' . $vocabulary->machine_name,
+      'type' => 'taxonomy_term_reference',
+      // Set cardinality to unlimited for tagging.
+      'cardinality' => FIELD_CARDINALITY_UNLIMITED,
+      'settings' => array(
+          'allowed_values' => array(
+              array(
+                  'vocabulary' => $vocabulary->machine_name,
+                  'parent' => 0,
+              ),
+          ),
+      ),
+  );
+  field_create_field($field);
+
+  $help = st('Enter a comma-separated list of words to describe your content.');
+  $instance = array(
+      'field_name' => 'field_' . $vocabulary->machine_name,
+      'entity_type' => 'node',
+      'label' => 'Tags',
+      'bundle' => 'article',
+      'description' => $help,
+      'widget' => array(
+          'type' => 'taxonomy_autocomplete',
+          'weight' => -4,
+      ),
+      'display' => array(
+          'default' => array(
+              'type' => 'taxonomy_term_reference_link',
+              'weight' => 10,
+          ),
+          'teaser' => array(
+              'type' => 'taxonomy_term_reference_link',
+              'weight' => 10,
+          ),
+      ),
+  );
+  field_create_instance($instance);
+
+    // From shortcut.install, add shortcuts to the default set on install
+  $shortcut_set = shortcut_set_load(SHORTCUT_DEFAULT_SET_NAME);
+  $shortcut_set->links = NULL;
+  $shortcut_set->links = array(
+    array(
+      'link_path' => 'admin/appearance/settings',
+      'link_title' => st('Theme'),
+      'weight' => -17,
+    ),
+  );
+  shortcut_set_save($shortcut_set);
+
+  // Enable default permissions for system roles.
+  $filtered_html_permission = filter_permission_name($filtered_html_format);
+  user_role_grant_permissions(DRUPAL_ANONYMOUS_RID, array('access content', 'access comments', $filtered_html_permission));
+  user_role_grant_permissions(DRUPAL_AUTHENTICATED_RID, array('access content', 'access comments', 'post comments', 'skip comment approval', $filtered_html_permission));
+
+  // Create a default role for site administrators, with all available permissions assigned.
+  $admin_role = new stdClass();
+  $admin_role->name = 'administrator';
+  $admin_role->weight = 10;
+  user_role_save($admin_role);
+  user_role_grant_permissions($admin_role->rid, array_keys(module_invoke_all('permission')));
+  // Set this as the administrator role.
+  variable_set('user_admin_role', $admin_role->rid);
+
+  // Assign user 1 the "administrator" role.
+  db_insert('users_roles')
+    ->fields(array('uid' => 1, 'rid' => $admin_role->rid))
+    ->execute();
+
+  // Create a Home link in the main menu.
+  $itemHome = array(
+      'link_title' => st('Home'),
+      'link_path' => '<front>',
+      'menu_name' => 'main-menu',
+  );
+  menu_link_save($itemHome);
+  // Update the menu router information.
+  menu_rebuild();
+  // ignore any rebuild messages
+  node_access_needs_rebuild(FALSE);
+  // ignore any other install messages
+  drupal_get_messages();
+
+    // Enable the admin theme. --> This is how to enable a theme
+    db_update('system')
+        ->fields(array('status' => 1))
+        ->condition('type', 'theme')
+        ->condition('name', 'seven')
+        ->execute();
+    variable_set('admin_theme', 'seven');
+    variable_set('node_admin_theme', '1');
+
+    // Enable the default theme
+    db_update('system')
+        ->fields(array('status' => 1))
+        ->condition('type', 'theme')
+        ->condition('name', 'cksub')
+        ->execute();
+    variable_set('default_theme', 'cksub');
+}
+
+function zurb_profile_install_tasks_alter(&$tasks, $install_state) {
+    // Hide the database configuration step.
+    $tasks['install_settings_form']['display'] = FALSE;
+
+
+    // See this issue, that we cant just form_alter the database configuration
+    // page: http://drupal.org/node/1153646
+    //
+    // We supply our own database configuration form -- and by doing so also need
+    // to supply _submit and _validate functions herein. We just copy the
+    // source code from those functions into ours.
+    //
+    // If you use the *hack* in the above issue queue you dont need to do this
+    // function override of this settings form. You can just do a simple:
+    // system_form_install_settings_form() in your installation profile and
+    // supply default values I believe.
+    //
+    // But dragons be there! 'Ye be warned. It's not Kosher.
+    $tasks['install_settings_form']['function'] = 'zurb_profile_install_settings_form';
+}
+
+/**
+ * Our custom database form. We force our own local values. Why, who knows.
+ */
+function zurb_profile_install_settings_form($form, &$form_state, &$install_state) {
+    global $databases;
+
+    $profile = $install_state['parameters']['profile'];
+    $install_locale = $install_state['parameters']['locale'];
+
+    drupal_static_reset('conf_path');
+    $conf_path = './' . conf_path(FALSE);
+    $settings_file = $conf_path . '/settings.php';
+
+    // Get server name w/o the ".dev" and feed it to database array
+    $serverName = $_SERVER['SERVER_NAME'];
+    $parts = explode('.', $serverName);
+    $databaseName = $parts[0];
+
+
+// I added this line with our defaults.
+    $databases['default']['default'] = array(
+        'driver'   => 'mysql',
+        'database' => $databaseName,
+        'username' => 'root',
+        'password' => 'root',
+        'host'     => '127.0.0.1',
+        'port'     => '8889',
+        'prefix'   => '',
+    );
+// The rest of this function is almost the same ....
+
+
+    $database = isset($databases['default']['default']) ? $databases['default']['default'] : array();
+
+    drupal_set_title(st('Database configuration'));
+
+    $drivers = drupal_get_database_types();
+    $drivers_keys = array_keys($drivers);
+
+    $form['driver'] = array(
+        '#type' => 'radios',
+        '#title' => st('Database type'),
+        '#required' => TRUE,
+        '#default_value' => !empty($database['driver']) ? $database['driver'] : current($drivers_keys),
+        '#description' => st('The type of database your @drupal data will be stored in.', array('@drupal' => drupal_install_profile_distribution_name())),
+    );
+    if (count($drivers) == 1) {
+        $form['driver']['#disabled'] = TRUE;
+        $form['driver']['#description'] .= ' ' . st('Your PHP configuration only supports a single database type, so it has been automatically selected.');
+    }
+
+    // Add driver specific configuration options.
+    foreach ($drivers as $key => $driver) {
+        $form['driver']['#options'][$key] = $driver->name();
+
+        $form['settings'][$key] = $driver->getFormOptions($database);
+        $form['settings'][$key]['#prefix'] = '<h2 class="js-hide">' . st('@driver_name settings', array('@driver_name' => $driver->name())) . '</h2>';
+        $form['settings'][$key]['#type'] = 'container';
+        $form['settings'][$key]['#tree'] = TRUE;
+        $form['settings'][$key]['advanced_options']['#parents'] = array($key);
+        $form['settings'][$key]['#states'] = array(
+            'visible' => array(
+                ':input[name=driver]' => array('value' => $key),
+            ),
+        );
+    }
+
+    $form['actions'] = array('#type' => 'actions');
+    $form['actions']['save'] = array(
+        '#type' => 'submit',
+        '#value' => st('Save and continue'),
+        '#limit_validation_errors' => array(
+            array('driver'),
+            array(isset($form_state['input']['driver']) ? $form_state['input']['driver'] : current($drivers_keys)),
+        ),
+// I Edited this line, to point ot our custom submit function.
+        '#submit' => array('zurb_profile_install_settings_form_submit'),
+    );
+
+    $form['errors'] = array();
+    $form['settings_file'] = array(
+        '#type' => 'value',
+        '#value' => $settings_file,
+    );
+
+    return $form;
+}
+
+
+/**
+ * A custom validate function, copied from Core.
+ */
+function zurb_profile_install_settings_form_validate($form, &$form_state) {
+    $driver = $form_state['values']['driver'];
+    $database = $form_state['values'][$driver];
+
+// I added this line, setting a default password in the _form() function
+// didn't appear to work on the screen.
+    $database['password'] = 'root';
+
+    $database['driver'] = $driver;
+
+    // TODO: remove when PIFR will be updated to use 'db_prefix' instead of
+    // 'prefix' in the database settings form.
+    $database['prefix'] = $database['db_prefix'];
+    unset($database['db_prefix']);
+
+    $form_state['storage']['database'] = $database;
+    $errors = install_database_errors($database, $form_state['values']['settings_file']);
+    foreach ($errors as $name => $message) {
+        form_set_error($name, $message);
+    }
+}
+
+
+
+/**
+ * Custom submit function. Copied from Core install_settings_form_submit().
+ */
+function zurb_profile_install_settings_form_submit($form, &$form_state) {
+    global $install_state;
+
+    // Update global settings array and save.
+    $settings['databases'] = array(
+        'value' => array('default' => array('default' => $form_state['storage']['database'])),
+        'required' => TRUE,
+    );
+    $settings['drupal_hash_salt'] = array(
+        'value' => drupal_hash_base64(drupal_random_bytes(55)),
+        'required' => TRUE,
+    );
+    drupal_rewrite_settings($settings);
+    // Indicate that the settings file has been verified, and check the database
+    // for the last completed task, now that we have a valid connection. This
+    // last step is important since we want to trigger an error if the new
+    // database already has Drupal installed.
+    $install_state['settings_verified'] = TRUE;
+    $install_state['completed_task'] = install_verify_completed_task();
+}

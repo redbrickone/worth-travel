@@ -1,0 +1,41 @@
+build:
+  target: docroot
+  build_file: build.make
+subtrees:
+  cksub:
+    path: docroot/sites/all/themes/cksub
+    uri: 'git@gitlab.codekoalas.com:golden/cksub.git'
+    branch: master
+    message: 'cksub subtree from git@gitlab.codekoalas.com:golden/cksub.git'
+  zurb_profile:
+    path: docroot/profiles/zurb_profile
+    uri: 'git@gitlab.codekoalas.com:golden/golden-profile.git'
+    branch: master
+    message: 'golden profile from git@gitlab.codekoalas.com:golden/golden-profile.git'
+  background_image_formatter:
+    path: docroot/sites/all/modules/ckcore/background_image_formatter
+    uri: 'git@gitlab.codekoalas.com:custom-drupal-modules/background_image_formatter.git'
+    branch: master
+    message: 'background_image_formatter subtree from gitlab'
+  ck_paragraph_pack:
+    path: docroot/sites/all/modules/ckcore/ck_paragraph_pack
+    uri: 'git@gitlab.codekoalas.com:custom-drupal-modules/paragraph-packs.git'
+    branch: master
+    message: 'ck_paragraph_pack subtree from gitlab'
+  landing_page_content_types:
+    path: docroot/sites/all/modules/ckcore/landing_page_content_types
+    uri: 'git@gitlab.codekoalas.com:custom-drupal-modules/landing-pages.git'
+    branch: master
+    message: 'landing_page_content_type subtree from gitlab'
+  classy_paragraphs_ui:
+    path: docroot/sites/all/modules/ckcore/classy_paragraphs_ui
+    uri: 'https://github.com/fabean/classy_paragraphs_ui.git'
+    branch: master
+    message: 'classy_paragraphs_ui subtree from github'
+
+postbuild-commands:
+  - 'rm -rf docroot/sites/default/settings.php; cd docroot/sites/default; ln -s ../../../default/settings.php settings.php;'
+  - 'rm -rf docroot/.htaccess; cd docroot; ln -s ../projects/.htaccess .htaccess'
+  - 'mkdir docroot/sites/all/modules/custom'
+
+

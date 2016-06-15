@@ -1,0 +1,36 @@
+// Common abstract classes to extend or parametrics are stored here.
+
+// Example parametrics.
+// ------------------------------------------------------
+// %font-FONTNAME   {}
+// %font-sans-serif { font-family: sans-serif; }
+// %font-serif      { font-family: serif; }
+
+.inside-row {
+  margin: auto;
+  max-width: $inside-row;
+  overflow: hidden;
+}
+
+.uppercase {
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.table-center {
+  display: table;
+  margin: 0 auto;
+}
+
+.background-cover {
+  background-size: cover;
+}
+
+.overlay {
+  bottom: 0;
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+

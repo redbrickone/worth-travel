@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Code Koalas Paragraph Pack feature.
+ */
+
+include_once 'ck_paragraph_pack.features.inc';
